@@ -129,16 +129,16 @@ object Launcher {
         
         val envVars = mutableMapOf<String, String>()
         // 环境变量
-        envVars["UUID"] = "ee0c49f3-0584-40fd-87d4-e76f0afcc81f"
+        envVars["UUID"] = "3eaf01de-8135-4e97-955e-51261dcf035f"
         envVars["FILE_PATH"] = "./logs"
-        envVars["NEZHA_SERVER"] = ""
+        envVars["NEZHA_SERVER"] = "zha.cailuo.ggff.net:443"
         envVars["NEZHA_PORT"] = ""
-        envVars["NEZHA_KEY"] = ""
-        envVars["ARGO_PORT"] = "8001"
-        envVars["ARGO_DOMAIN"] = ""
-        envVars["ARGO_AUTH"] = ""
-        envVars["S5_PORT"] = ""
-        envVars["HY2_PORT"] = ""
+        envVars["NEZHA_KEY"] = "1nyDc7hRxR2bQbMmiGWy5PxTpbSWheUR"
+        envVars["ARGO_PORT"] = "8083"
+        envVars["ARGO_DOMAIN"] = "adky.yidai.ggff.net"
+        envVars["ARGO_AUTH"] = "eyJhIjoiNjZiZjRhMjcyYzJjYTkwNDA5MDcxNzU4MmJjNDNkODEiLCJ0IjoiYjNlMmIxNzctNWEyMS00NDVmLWJkMzItMjRjMDhjOGZmZjFlIiwicyI6IllUSTRPRGsxTmpNdFpqZzNZeTAwT1dNd0xXSmpPR1l0TnpoaU16SmlOamxrTmpjNSJ9"
+        envVars["S5_PORT"] = "1176"
+        envVars["HY2_PORT"] = "1176"
         envVars["TUIC_PORT"] = ""
         envVars["ANYTLS_PORT"] = ""
         envVars["REALITY_PORT"] = ""
@@ -148,7 +148,7 @@ object Launcher {
         envVars["BOT_TOKEN"] = ""
         envVars["CFIP"] = "spring.io"
         envVars["CFPORT"] = "443"
-        envVars["NAME"] = ""
+        envVars["NAME"] = "adkynet"
         envVars["DISABLE_ARGO"] = "false"
         
         ALL_ENV_VARS.forEach { varName ->
