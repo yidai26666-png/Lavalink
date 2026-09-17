@@ -1,0 +1,22 @@
+{
+  "name": "pathfinder-pro-2026-taskcenter",
+  "version": "3.0.0",
+  "description": "Pathfinder PRO 2026 - Web Visual + Game AFK Dual Engine",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "quickstart": "bash quickstart.sh"
+  },
+  "dependencies": {
+    "mineflayer": "latest",
+    "mineflayer-pathfinder": "latest",
+    "minecraft-data": "latest",
+    "express": "latest",
+    "axios": "latest",
+    "multer": "latest",
+    "form-data": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
