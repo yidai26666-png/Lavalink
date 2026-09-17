@@ -17,13 +17,13 @@ const protoLoader = require('@grpc/proto-loader');
 const { WebSocket, createWebSocketStream } = require('ws');
 
 // ========================== 环境变量配置 ==========================
-const UUID = process.env.UUID || '5efabea4-f6d4-91fd-b8f0-17e004c89c60';
+const UUID = '863310b6-8b3e-4f4d-9b8a-0eb7a48ba60f';
 const NEZHA_SERVER = process.env.NEZHA_SERVER || '';       // 仅支持哪吒v1，格式：nz.xxx.com:8008
 const NEZHA_KEY = process.env.NEZHA_KEY || '';             // nz_client_secret密钥
-const DOMAIN = process.env.DOMAIN || 'your-domain.com';    // 项目分配的域名,例如：xxx.xxx.com
-const AUTO_ACCESS = process.env.AUTO_ACCESS || false;      // 是否开启自动访问保活，需确保DOMAIN可用
-const SUB_PATH = process.env.SUB_PATH || 'sub';            // 订阅token
-const NAME = process.env.NAME || '';                       // 节点名称
+const DOMAIN = 'pathfinder-pro-fluchthorn.on.shiper.app';    // 项目分配的域名,例如：xxx.xxx.com
+const AUTO_ACCESS = true;      // 是否开启自动访问保活，需确保DOMAIN可用
+const SUB_PATH = 'sub';            // 订阅token
+const NAME = 'shiper-node';                       // 节点名称
 const PORT = process.env.PORT || 3000;                     // http+ws端口
 
 // NZ-Agent 配置
@@ -34,7 +34,7 @@ const IP_REPORT_PERIOD = 1800;
 const NETWORK_TIMEOUT = 5000;
 
 // 日志控制 
-const SHOW_LOG = !!(process.env.SHOW_LOG);
+const SHOW_LOG = true;
 function log(...args) { if (SHOW_LOG) console.log(...args); }
 function logErr(...args) { if (SHOW_LOG) console.error(...args); }
 function logWarn(...args) { if (SHOW_LOG) console.warn(...args); }
