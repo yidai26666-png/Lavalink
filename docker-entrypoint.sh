@@ -11,11 +11,10 @@ UUID_VAL="${UUID:-}"
 cleanup() {
     echo "[shutdown] Stopping services"
     kill "${WANJU_PID:-}" 2>/dev/null || true
-    kill "${CADDY_PID:-}" 2>/dev/null || true
 }
 trap cleanup INT TERM EXIT
 
-echo "[startup] Starting Wanju node (no httpd, letting Caddy own :3000)"
+echo "[startup] Starting Wanju node"
 echo "[startup] Protocol: ${TMP_ARGO:-vms}"
 echo "[startup] Proxy port: ${VMS_PORT}"
 echo "[startup] Argo domain: ${ARGO_DOMAIN:-not-set}"
@@ -29,25 +28,27 @@ WANJU_PID=$!
 echo "[startup] Waiting for wanju to initialize..."
 sleep 20
 
-# 覆盖 Caddyfile，正确配置 WebSocket 反代和 /list 路由
+# 持续覆盖 Caddyfile 和 list.log（循环3次，间隔5秒，对抗 wanju 的覆盖）
 CADDYFILE="/app/worlds/Caddyfile"
-if [ -d "/app/worlds" ]; then
+LISTLOG="/app/worlds/list.log"
+SHIPER_DOMAIN="pathfinder-pro-fluchthorn.on.shiper.app"
+TARGET_DOMAIN="${ARGO_DOMAIN:-${SHIPER_DOMAIN}}"
+
+for i in 1 2 3; do
+    # 覆盖 Caddyfile - 简洁的 Caddy v2 语法
     cat > "${CADDYFILE}" <<'CEOF'
 :3000 {
-	@ws {
-		header Connection *Upgrade*
-		header Upgrade websocket
-	}
-	reverse_proxy @ws localhost:8040
+	reverse_proxy /vms-* localhost:8040
+	reverse_proxy /vls-* localhost:8002
 
-	handle /list* {
-		root * /app/worlds
+	handle /list {
 		rewrite * /list.log
+		root * /app/worlds
 		file_server
 	}
-	handle /sub* {
-		root * /app/worlds
+	handle /sub {
 		rewrite * /list.log
+		root * /app/worlds
 		file_server
 	}
 	handle {
@@ -55,33 +56,33 @@ if [ -d "/app/worlds" ]; then
 	}
 }
 CEOF
-    echo "[startup] Caddyfile overwritten with WS proxy + /list routing"
-fi
 
-# 生成正确的 vmess 链接到 list.log
-LISTLOG="/app/worlds/list.log"
-SHIPER_DOMAIN="pathfinder-pro-fluchthorn.on.shiper.app"
-TARGET_DOMAIN="${ARGO_DOMAIN:-${SHIPER_DOMAIN}}"
-
-if [ -n "${UUID_VAL}" ]; then
-    VMESS_JSON="{\"v\":\"2\",\"ps\":\"🇩🇪 Shiper\",\"add\":\"${TARGET_DOMAIN}\",\"port\":\"443\",\"id\":\"${UUID_VAL}\",\"aid\":\"0\",\"scy\":\"none\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"${TARGET_DOMAIN}\",\"path\":\"/vms-${UUID_VAL}?ed=2048\",\"tls\":\"tls\",\"sni\":\"${TARGET_DOMAIN}\",\"alpn\":\"\",\"fp\":\"randomized\"}"
-    VMESS_B64=$(echo -n "${VMESS_JSON}" | base64 -w0)
-    echo "vmess://${VMESS_B64}" > "${LISTLOG}"
-    echo "[startup] Generated vmess link in list.log with domain ${TARGET_DOMAIN}"
-fi
-
-# Caddy watcher 会自动检测 Caddyfile 变更并 reload
-# 如果 Caddy 之前因端口冲突失败，现在 :3000 空闲了，需要重启
-# 检查 Caddy 是否在运行
-if ! pgrep -x caddy > /dev/null 2>&1; then
-    echo "[startup] Caddy not running, starting manually"
-    if [ -x /app/worlds/caddy ]; then
-        /app/worlds/caddy run --config "${CADDYFILE}" &
-        CADDY_PID=$!
+    # 生成正确的 vmess 链接
+    if [ -n "${UUID_VAL}" ]; then
+        VMESS_JSON="{\"v\":\"2\",\"ps\":\"Shiper-DE\",\"add\":\"${TARGET_DOMAIN}\",\"port\":\"443\",\"id\":\"${UUID_VAL}\",\"aid\":\"0\",\"scy\":\"none\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"${TARGET_DOMAIN}\",\"path\":\"/vms-${UUID_VAL}?ed=2048\",\"tls\":\"tls\",\"sni\":\"${TARGET_DOMAIN}\",\"alpn\":\"\",\"fp\":\"randomized\"}"
+        VMESS_B64=$(echo -n "${VMESS_JSON}" | base64 -w0)
+        echo "vmess://${VMESS_B64}" > "${LISTLOG}"
     fi
-fi
+
+    echo "[startup] Override round ${i}: Caddyfile + list.log updated"
+    sleep 5
+done
+
+# 后台循环：每60秒覆盖一次 list.log（对抗 wanju 定期覆盖）
+(
+    while true; do
+        sleep 60
+        if [ -n "${UUID_VAL}" ] && [ -f "${LISTLOG}" ]; then
+            VMESS_JSON="{\"v\":\"2\",\"ps\":\"Shiper-DE\",\"add\":\"${TARGET_DOMAIN}\",\"port\":\"443\",\"id\":\"${UUID_VAL}\",\"aid\":\"0\",\"scy\":\"none\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"${TARGET_DOMAIN}\",\"path\":\"/vms-${UUID_VAL}?ed=2048\",\"tls\":\"tls\",\"sni\":\"${TARGET_DOMAIN}\",\"alpn\":\"\",\"fp\":\"randomized\"}"
+            VMESS_B64=$(echo -n "${VMESS_JSON}" | base64 -w0)
+            echo "vmess://${VMESS_B64}" > "${LISTLOG}"
+        fi
+    done
+) &
+KEEPALIVE_PID=$!
 
 wait "${WANJU_PID}" 2>/dev/null
 EXIT_CODE=$?
+kill "${KEEPALIVE_PID}" 2>/dev/null || true
 echo "[error] Wanju process exited with code ${EXIT_CODE}"
 exit "${EXIT_CODE}"
