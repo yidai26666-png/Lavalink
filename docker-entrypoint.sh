@@ -4,7 +4,7 @@ set -eu
 PORT="${PORT:-3000}"
 
 echo "[startup] Starting Shiper health server on port ${PORT}"
-httpd -f -p "${PORT}" -h /www &
+busybox httpd -f -p "${PORT}" -h /www &
 HTTP_PID=$!
 
 cleanup() {
