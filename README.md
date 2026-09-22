@@ -1,2 +1,3 @@
-# Lavalink
-Shiper Wanju Node &amp; Proxy
+# Shiper Wanju Node
+
+Auto-deployed via Shiper.
