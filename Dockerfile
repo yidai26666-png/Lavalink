@@ -5,7 +5,8 @@ RUN apk add --no-cache \
     curl \
     ca-certificates \
     procps \
-    tzdata
+    tzdata \
+    python3
 
 WORKDIR /app
 
