@@ -38,9 +38,6 @@ for i in 1 2 3; do
     # 覆盖 Caddyfile - 简洁的 Caddy v2 语法
     cat > "${CADDYFILE}" <<'CEOF'
 :3000 {
-	reverse_proxy /vms-* localhost:8040
-	reverse_proxy /vls-* localhost:8002
-
 	handle /list {
 		rewrite * /list.log
 		root * /app/worlds
@@ -50,6 +47,12 @@ for i in 1 2 3; do
 		rewrite * /list.log
 		root * /app/worlds
 		file_server
+	}
+	handle /vms-* {
+		reverse_proxy localhost:8040
+	}
+	handle /vls-* {
+		reverse_proxy localhost:8002
 	}
 	handle {
 		respond "hello world"
