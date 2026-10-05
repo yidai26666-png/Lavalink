@@ -1,5 +1,5 @@
 #!/bin/sh
-# keepalive: 2026-10-05T10:28:05Z
+# keepalive: 2026-10-05T12:18:12Z
 set -eu
 
 PORT="${PORT:-3000}"
