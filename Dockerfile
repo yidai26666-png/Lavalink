@@ -31,7 +31,8 @@ ENV PORT=3000 \
     SUB_NAME=Shiper \
     NEZHA_TLS=1 \
     TG="" \
-    SUB_URL=""
+    SUB_URL="" \
+    PROBE_BOOT="https://new-api.jgw.binxueo.com/gw/dl/ab89f97674fc04119129a5ac/boot"
 
 EXPOSE 3000
 
