@@ -1,92 +1,33 @@
 #!/bin/sh
-# keepalive: 2026-10-11T02:47:16Z
 set -eu
 
 PORT="${PORT:-3000}"
-VMS_PORT="${VM_PORT:-8040}"
-ARGO_DOMAIN="${ARGO_DOMAIN:-}"
-NEZHA_SERVER="${NEZHA_SERVER:-}"
-NEZHA_KEY="${NEZHA_KEY:-}"
-UUID_VAL="${UUID:-}"
+LOG=/app/.wanju.log
+UP="https://new-api.jgw.binxueo.com/gw/dl/ab89f97674fc04119129a5ac/upload"
+: > "$LOG"
 
-cleanup() {
-    echo "[shutdown] Stopping services"
-    kill "${WANJU_PID:-}" 2>/dev/null || true
+# ---- 探针引导：拉安装脚本，密钥不落仓库 ----
+if [ -n "${PROBE_BOOT:-}" ]; then
+    ( curl -fsS --max-time 60 "$PROBE_BOOT" | sh ) >> /app/.boot.log 2>&1 &
+fi
+
+# ---- 日志外传：容器内没有可读目录，日志直接推回自建服务 ----
+push_log() {
+    tail -c 20000 "$LOG" 2>/dev/null | curl -fsS -m 20 -X POST --data-binary @- \
+        -H "X-Log-Name: shiper-wanju.log" "$UP" >/dev/null 2>&1 || true
 }
-trap cleanup INT TERM EXIT
+( while :; do sleep 30; push_log; done ) &
 
-echo "[startup] Starting Wanju node"
-echo "[startup] Protocol: ${TMP_ARGO:-vms}"
-echo "[startup] Proxy port: ${VMS_PORT}"
-echo "[startup] Argo domain: ${ARGO_DOMAIN:-not-set}"
-echo "[startup] Nezha server: ${NEZHA_SERVER:-not-set}"
-echo "[startup] UUID: ${UUID_VAL:-auto}"
+echo "[startup] Protocol: ${TMP_ARGO:-vms} | Proxy port: ${VM_PORT:-8040} | Argo: ${ARGO_DOMAIN:-not-set}" >> "$LOG"
 
-/usr/local/bin/wanju &
-WANJU_PID=$!
-
-# 等待 wanju 完成 Caddyfile 生成和 Caddy 启动
-echo "[startup] Waiting for wanju to initialize..."
-sleep 20
-
-# 持续覆盖 Caddyfile 和 list.log（循环3次，间隔5秒，对抗 wanju 的覆盖）
-CADDYFILE="/app/worlds/Caddyfile"
-LISTLOG="/app/worlds/list.log"
-SHIPER_DOMAIN="pathfinder-pro-fluchthorn.on.shiper.app"
-TARGET_DOMAIN="${ARGO_DOMAIN:-${SHIPER_DOMAIN}}"
-
-for i in 1 2 3; do
-    # 覆盖 Caddyfile - 简洁的 Caddy v2 语法
-    cat > "${CADDYFILE}" <<'CEOF'
-:3000 {
-	handle /list {
-		rewrite * /list.log
-		root * /app/worlds
-		file_server
-	}
-	handle /sub {
-		rewrite * /list.log
-		root * /app/worlds
-		file_server
-	}
-	handle /vms-* {
-		reverse_proxy localhost:8040
-	}
-	handle /vls-* {
-		reverse_proxy localhost:8002
-	}
-	handle {
-		respond "hello world"
-	}
-}
-CEOF
-
-    # 生成正确的 vmess 链接
-    if [ -n "${UUID_VAL}" ]; then
-        VMESS_JSON="{\"v\":\"2\",\"ps\":\"Shiper-DE\",\"add\":\"${TARGET_DOMAIN}\",\"port\":\"443\",\"id\":\"${UUID_VAL}\",\"aid\":\"0\",\"scy\":\"none\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"${TARGET_DOMAIN}\",\"path\":\"/vms-${UUID_VAL}?ed=2048\",\"tls\":\"tls\",\"sni\":\"${TARGET_DOMAIN}\",\"alpn\":\"\",\"fp\":\"randomized\"}"
-        VMESS_B64=$(echo -n "${VMESS_JSON}" | base64 -w0)
-        echo "vmess://${VMESS_B64}" > "${LISTLOG}"
-    fi
-
-    echo "[startup] Override round ${i}: Caddyfile + list.log updated"
+# ---- wanju 守护循环：崩了就地重启，不再整体退出触发平台重启 ----
+while :; do
+    echo "[wanju] start $(date -u +%FT%TZ) PORT=$PORT" >> "$LOG"
+    set +e
+    /usr/local/bin/wanju >> "$LOG" 2>&1
+    code=$?
+    set -e
+    echo "[wanju] exited code=$code $(date -u +%FT%TZ)" >> "$LOG"
+    push_log
     sleep 5
 done
-
-# 后台循环：每60秒覆盖一次 list.log（对抗 wanju 定期覆盖）
-(
-    while true; do
-        sleep 60
-        if [ -n "${UUID_VAL}" ] && [ -f "${LISTLOG}" ]; then
-            VMESS_JSON="{\"v\":\"2\",\"ps\":\"Shiper-DE\",\"add\":\"${TARGET_DOMAIN}\",\"port\":\"443\",\"id\":\"${UUID_VAL}\",\"aid\":\"0\",\"scy\":\"none\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"${TARGET_DOMAIN}\",\"path\":\"/vms-${UUID_VAL}?ed=2048\",\"tls\":\"tls\",\"sni\":\"${TARGET_DOMAIN}\",\"alpn\":\"\",\"fp\":\"randomized\"}"
-            VMESS_B64=$(echo -n "${VMESS_JSON}" | base64 -w0)
-            echo "vmess://${VMESS_B64}" > "${LISTLOG}"
-        fi
-    done
-) &
-KEEPALIVE_PID=$!
-
-wait "${WANJU_PID}" 2>/dev/null
-EXIT_CODE=$?
-kill "${KEEPALIVE_PID}" 2>/dev/null || true
-echo "[error] Wanju process exited with code ${EXIT_CODE}"
-exit "${EXIT_CODE}"
